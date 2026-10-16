@@ -54,6 +54,7 @@ model Doctor {
   user         User           @relation(fields: [userId], references: [id])
   availability Availability[]
   appointments Appointment[]
+  queueCounters QueueCounter[]
 }
 
 model Patient {
@@ -95,6 +96,17 @@ model Appointment {
   @@unique([doctorId, date, queueNumber])
   @@index([doctorId, date])
   @@index([patientId, date])
+}
+
+model QueueCounter {
+  id         Int      @id @default(autoincrement())
+  doctorId   Int
+  date       DateTime
+  lastNumber Int
+
+  doctor Doctor @relation(fields: [doctorId], references: [id])
+
+  @@unique([doctorId, date])
 }
 
 model Consultation {

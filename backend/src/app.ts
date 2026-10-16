@@ -6,6 +6,7 @@ import appointmentRouter from "./routes/appointment.routes";
 import availabilityRouter from "./routes/availability.routes";
 import consultationRouter from "./routes/consultation.routes.js";
 import prescriptionRouter from "./routes/prescription.routes.js";
+import authRouter from "./routes/auth.routes.js";
 
 const app = express();
 
@@ -19,5 +20,6 @@ app.use('/api',appointmentRouter)
 app.use("/api", availabilityRouter);
 app.use("/api", consultationRouter);
 app.use("/api", prescriptionRouter);
+app.use("/api", authRouter);
 
 export default app;

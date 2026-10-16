@@ -1,9 +1,24 @@
-import { createAppointment, findAppointmentDetails, findDoctorById, findLastQueueNumber, findpatientAppointments, findPatientById } from "../queries/appointment.query";
-import { PatientVisitsInput, VisitDetailsInput } from "../types/appointment.types";
-import { getStartOfDay } from "../utils/date";
-import { prisma } from "../utils/prisma";
+import {
+    allocateNextQueueNumber,
+    createAppointment,
+    findAppointmentDetails,
+    findDoctorById,
+    findpatientAppointments,
+    findPatientById,
+} from "../queries/appointment.query.js";
 
-export const addPatientToQueue = async (patientId: number, doctorId: number) => {
+import type {
+    PatientVisitsInput,
+    VisitDetailsInput,
+} from "../types/appointment.types.js";
+
+import { getStartOfDay } from "../utils/date.js";
+import { prisma } from "../utils/prisma.js";
+
+export const addPatientToQueue = async (
+    patientId: number,
+    doctorId: number,
+) => {
     const patient = await findPatientById(patientId);
 
     if (!patient) {
@@ -15,23 +30,33 @@ export const addPatientToQueue = async (patientId: number, doctorId: number) => 
     if (!doctor) {
         throw new Error("Doctor not found");
     }
+
     if (!doctor.isActive) {
         throw new Error("Doctor is not active");
     }
+
     const date = getStartOfDay();
 
-    const lastQueueNumber = await findLastQueueNumber(doctorId, date);
-    const queueNumber = lastQueueNumber ? lastQueueNumber.queueNumber + 1 : 1;
+    return prisma.$transaction(async (tx) => {
+        const queueNumber = await allocateNextQueueNumber(
+            tx,
+            doctorId,
+            date,
+        );
 
-    return await createAppointment(doctorId, patientId, date, queueNumber);
-}
+        return createAppointment(tx, {
+            doctorId,
+            patientId,
+            date,
+            queueNumber,
+        });
+    });
+};
 
 export const callPatient = async (appointmentId: number) => {
     const appointment = await prisma.appointment.findUnique({
-        where: {
-            id: appointmentId
-        }
-    })
+        where: { id: appointmentId },
+    });
 
     if (!appointment) {
         throw new Error("Appointment not found");
@@ -42,22 +67,17 @@ export const callPatient = async (appointmentId: number) => {
     }
 
     return prisma.appointment.update({
-        where: {
-            id: appointmentId,
-        },
-        data: {
-            status: "CALLED",
-        },
+        where: { id: appointmentId },
+        data: { status: "CALLED" },
     });
+};
 
-}
-
-export const startConsultation = async (appointmentId: number) => {
+export const startConsultation = async (
+    appointmentId: number,
+) => {
     const appointment = await prisma.appointment.findUnique({
-        where: {
-            id: appointmentId
-        }
-    })
+        where: { id: appointmentId },
+    });
 
     if (!appointment) {
         throw new Error("Appointment not found");
@@ -68,22 +88,16 @@ export const startConsultation = async (appointmentId: number) => {
     }
 
     return prisma.appointment.update({
-        where: {
-            id: appointmentId,
-        },
-        data: {
-            status: "IN_CONSULTATION",
-        },
+        where: { id: appointmentId },
+        data: { status: "IN_CONSULTATION" },
     });
-}
+};
 
 export const completeAppointment = async (
     appointmentId: number,
 ) => {
     const appointment = await prisma.appointment.findUnique({
-        where: {
-            id: appointmentId,
-        },
+        where: { id: appointmentId },
     });
 
     if (!appointment) {
@@ -91,37 +105,31 @@ export const completeAppointment = async (
     }
 
     if (appointment.status !== "IN_CONSULTATION") {
-        throw new Error(
-            "Appointment is not in consultation",
-        );
+        throw new Error("Appointment is not in consultation");
     }
 
     return prisma.appointment.update({
-        where: {
-            id: appointmentId,
-        },
-        data: {
-            status: "COMPLETED",
-        },
+        where: { id: appointmentId },
+        data: { status: "COMPLETED" },
     });
 };
 
 export const getPatientVisitsService = async (
-  input: PatientVisitsInput,
+    input: PatientVisitsInput,
 ) => {
-  return findpatientAppointments(input.patientId);
+    return findpatientAppointments(input.patientId);
 };
 
 export const getVisitDetailsService = async (
-  input: VisitDetailsInput,
+    input: VisitDetailsInput,
 ) => {
-  const visit = await findAppointmentDetails(
-    input.appointmentId,
-  );
+    const visit = await findAppointmentDetails(
+        input.appointmentId,
+    );
 
-  if (!visit) {
-    throw new Error("Appointment not found");
-  }
+    if (!visit) {
+        throw new Error("Appointment not found");
+    }
 
-  return visit;
+    return visit;
 };
