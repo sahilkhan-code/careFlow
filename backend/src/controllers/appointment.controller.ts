@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { addPatientToQueue, callPatient, completeAppointment, getPatientVisitsService, getVisitDetailsService, startConsultation } from "../services/appointment.service";
 import { error } from "console";
+import { appointmentQueue } from "../queues/appointment.queue";
 
 export const createAppointmentController = async (req: Request, res: Response) => {
     try {
@@ -19,6 +20,21 @@ export const createAppointmentController = async (req: Request, res: Response) =
             status: true,
             data: appointment
         })
+
+        await appointmentQueue.add(
+            "send-confirmation",
+            {
+                appointmentID:appointment.id,
+                // patientIdEmail:appointment.patientEmail
+            },
+           {
+             attempts:3,
+             backoff:{
+                type:"exponential",
+                delay:2000,
+             }
+            }
+        )
 
     } catch (err) {
         console.error(err)
