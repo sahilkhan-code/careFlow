@@ -10,7 +10,10 @@ import authRouter from "./routes/auth.routes.js";
 
 const app = express();
 
-app.use(cors())
+app.use(cors({
+  origin: "http://localhost:5173",
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+}));
 
 app.use(express.json())
 
