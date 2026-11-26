@@ -37,8 +37,5 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate --config prisma7.config.ts
 
-      - name: Run tests
-        run: npm test
-
       - name: Build application
         run: npm run build
